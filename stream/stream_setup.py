@@ -34,8 +34,9 @@ def get_rtmp_url(youtube, stream_id):
         print(f"An error occurred: {e}")
         return None, None
 
-def create_scheduled_stream(youtube, title, description, start_time, privacy="private", made_for_kids=False):
+def create_scheduled_stream(youtube, title, description, start_time, privacy="private", made_for_kids=False, thumbnail_path=None):
     try:
+        # Create the live broadcast
         broadcast = youtube.liveBroadcasts().insert(
             part="snippet,contentDetails,status",
             body={
@@ -52,6 +53,7 @@ def create_scheduled_stream(youtube, title, description, start_time, privacy="pr
             }
         ).execute()
 
+        # Create the live stream
         stream = youtube.liveStreams().insert(
             part="snippet,cdn,contentDetails",
             body={
@@ -61,15 +63,56 @@ def create_scheduled_stream(youtube, title, description, start_time, privacy="pr
             }
         ).execute()
 
+        # Bind the stream to the broadcast
         youtube.liveBroadcasts().bind(
             part="id,contentDetails",
             id=broadcast["id"],
             streamId=stream["id"]
         ).execute()
 
+        # Set the thumbnail if provided
+        if thumbnail_path:
+            set_thumbnail(youtube, broadcast["id"], thumbnail_path)
+
+        # Get RTMP URL and stream key
         rtmp_url, stream_key = get_rtmp_url(youtube, stream["id"])
 
         return broadcast["id"], stream["id"], rtmp_url, stream_key
     except HttpError as e:
         print(f"An error occurred: {e}")
         return None, None, None, None
+
+def set_thumbnail(youtube, broadcast_id, thumbnail_path):
+    try:
+        if not os.path.exists(thumbnail_path):
+            print(f"Thumbnail file '{thumbnail_path}' not found.")
+            return False
+
+        youtube.thumbnails().set(
+            videoId=broadcast_id,
+            media_body=thumbnail_path
+        ).execute()
+
+        print(f"Thumbnail uploaded successfully for broadcast ID: {broadcast_id}")
+        return True
+    except HttpError as e:
+        print(f"An error occurred while setting the thumbnail: {e}")
+        return False
+
+def set_thumbnail(youtube, broadcast_id, thumbnail_path):
+    try:
+        if not os.path.exists(thumbnail_path):
+            print(f"Thumbnail file '{thumbnail_path}' not found.")
+            return False
+
+        with open(thumbnail_path, "rb") as file:
+            youtube.thumbnails().set(
+                videoId=broadcast_id,
+                media_body=thumbnail_path
+            ).execute()
+
+        print(f"Thumbnail uploaded successfully for broadcast ID: {broadcast_id}")
+        return True
+    except HttpError as e:
+        print(f"An error occurred while setting the thumbnail: {e}")
+        return False
