@@ -58,7 +58,7 @@ def main():
 
     # Print the response
     print("OpenAI Response:")
-    print(response.choices[0].message.content.strip())
+    print(response.choices[0].message.content.strip("`\""))
 
 if __name__ == "__main__":
     main()
